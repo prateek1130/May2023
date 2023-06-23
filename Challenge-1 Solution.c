@@ -52,7 +52,7 @@ int main() {
         printf("Received packet is corrupted and will be discarded.\n");
     } else {
         // Packet is intact
-        printf("Received packet is intct and will be processed.\n");
+        printf("Received packet is intact and will be processed.\n");
     }
     
     return 0;
