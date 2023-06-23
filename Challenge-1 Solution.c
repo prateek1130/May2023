@@ -10,57 +10,51 @@ typedef struct data_packet_t {
     uint16_t crc;
 } data_packet_t;
 
-
-uint16_t calculateCRC(data_packet_t packet) {
-    uint16_t crc = 0xFFFF; 
+// CRC-16 implementation (using CCITT polynomial 0x1021)
+uint16_t calculateCRC(uint8_t *data, uint8_t length) {
+    uint16_t crc = 0xFFFF;
     
-    crc ^= packet.id;
-    crc ^= packet.data_length;
-
-    for (int i = 0; i < packet.data_length; i++) {
-        crc ^= packet.data[i];
-
-        for (int j = 0; j < 8; j++) {
-            if (crc & 0x0001)
-                crc = (crc >> 1) ^ 0xA001;
+    for (uint8_t i = 0; i < length; ++i) {
+        crc ^= (uint16_t)data[i] << 8;
+        for (uint8_t j = 0; j < 8; ++j) {
+            if (crc & 0x8000)
+                crc = (crc << 1) ^ 0x1021;
             else
-                crc = (crc >> 1);
+                crc = crc << 1;
         }
     }
-
+    
     return crc;
 }
 
-int isPacketCorrupted(data_packet_t packet) {
-    uint16_t recalculatedCRC = calculateCRC(packet);
+int isPacketCorrupted(data_packet_t *packet) {
+    uint16_t calculatedCRC = calculateCRC((uint8_t *)packet, sizeof(data_packet_t) - sizeof(uint16_t));
     
-    if (recalculatedCRC == packet.crc)
-        return 0;
-    else
-        return 1;
+    return (calculatedCRC != packet->crc);
 }
 
 int main() {
-    data_packet_t packet;
+    // Example usage
+    data_packet_t received_packet; // Define the received_packet variable
     
-    // Enter the ID: ;
-    scanf("%hhu", &packet.id);
+    // Assuming you have received the packet and populated its values
+    received_packet.id = 1;
+    received_packet.data_length = 5;
+    received_packet.data[0] = 0x11;
+    received_packet.data[1] = 0x22;
+    received_packet.data[2] = 0x33;
+    received_packet.data[3] = 0x44;
+    received_packet.data[4] = 0x55;
+    received_packet.crc = calculateCRC((uint8_t *)&received_packet, sizeof(data_packet_t) - sizeof(uint16_t)); // Assuming the received CRC value
     
-    // Enter the data length;
-    scanf("%hhu", &packet.data_length);
+    if (isPacketCorrupted(&received_packet)) {
+        // Packet is corrupted
+        printf("Received packet is corrupted and will be discarded.\n");
+    } else {
+        // Packet is intact
+        printf("Received packet is intact and will be processed.\n");
+    }
     
-    // Enter the data up to %d characters: MAX_PACKET_DATA_LENGTH;
-    scanf("%s", packet.data);
-    
-    // Enter the CRC:
-    scanf("%hu", &packet.crc);
-
-    int isCorrupted = isPacketCorrupted(packet);
-
-    if (isCorrupted)
-        printf("Packet is corrupted.\n");
-    else
-        printf("Packet is not corrupted.\n");
-
     return 0;
 }
+
